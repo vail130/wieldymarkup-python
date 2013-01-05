@@ -1,0 +1,17 @@
+`<!DOCTYPE html>`
+html lang=en
+  head
+    title <My Website>
+  body
+    div#application
+      div.navbar
+        div.navbar-inner
+          a.brand href=# <Title>
+          ul.nav
+            li.active
+              a href=# <Home>
+            li
+              a href=# <Link>
+      form enctype=multipart/formdata
+        -input type=text readonly=
+
