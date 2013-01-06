@@ -1,18 +1,20 @@
 #!/usr/bin/env python
 
 """
-PyLMTH
-~~~~~~~~~~~~
-
 :copyright: (c) 2013 by Vail Gold.
-:license: 
-
+:license: See LICENSE.txt for details.
 """
 
 import sys
 
-for filepath in sys.argv[1:]:
+args = sys.argv[1:]
 
+compress = False
+if "-c" in args:
+  compress = True
+  args = [arg for arg in args if arg != "-c"]
+
+for filepath in args:
   try:
     ext = filepath.split('/')[-1].split('.')[-1]
   except Exception:
@@ -38,11 +40,10 @@ for filepath in sys.argv[1:]:
   
   from compile import Compiler
   
-  html = Compiler(data).output
+  html = Compiler(data, compress=compress).output
   
   temp = filepath.split('/')
   temp.pop()
   filename = '/'.join(temp) + '/' + filepath.split('/')[-1].split('.')[0] + '.html'
   with open(filename, 'wb') as f:
     f.write(html)
-  

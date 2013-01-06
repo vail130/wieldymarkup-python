@@ -18,8 +18,10 @@
           </ul>
         </div>
       </div>
-      <form enctype="multipart/formdata">
-        <input type="text" readonly="" />
+      <form enctype="multipart/form-data">
+        <% var d = new Date(); %>
+        <input type="text" readonly="" value="<%= d.getDate() %>" />
+        <p><%= val %> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
       </form>
     </div>
   </body>

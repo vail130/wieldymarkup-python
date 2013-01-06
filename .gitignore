@@ -1,3 +1,4 @@
 .komodotools
 *.komodoproject
 .DS_Store
+*.pyc
