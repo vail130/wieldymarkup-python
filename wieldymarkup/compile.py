@@ -44,7 +44,7 @@ class Compiler(object):
       status = not status
     return output
   
-  def __init__(self, text='', compress=False):
+  def __init__(self, text="", compress=False):
     self.output = ""
     self.open_tags = []
     self.indent_token = ""
@@ -54,7 +54,8 @@ class Compiler(object):
     self.line_number = 0
     self.embedding_token = '`'
     self.compress = compress
-    self.compile()
+    if self.text != "":
+      self.compile()
   
   def compile(self):
     while self.text != "":

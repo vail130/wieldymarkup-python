@@ -3,9 +3,9 @@ html lang=en
   head
     title <My Website>
   body
-    div#application
-      div.navbar
-        div.navbar-inner
+    #application
+      .navbar
+        .navbar-inner
           a.brand href=# <Title>
           ul.nav
             li.active

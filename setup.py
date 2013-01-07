@@ -11,8 +11,6 @@ from setuptools import setup, find_packages
 # documentation: http://pypi.python.org/pypi/setuptools
 REQUIRES = ["six"]
 
-if sys.version_info < (2, 6):
-  REQUIRES.append('simplejson')
 if sys.version_info >= (3,0):
   REQUIRES.append('unittest2py3k')
 else:
