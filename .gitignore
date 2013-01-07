@@ -2,3 +2,7 @@
 *.komodoproject
 .DS_Store
 *.pyc
+lib/
+bin/
+.Python
+include/

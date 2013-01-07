@@ -44,7 +44,7 @@ class Compiler(object):
       status = not status
     return output
   
-  def __init__(self, text, compress=False):
+  def __init__(self, text='', compress=False):
     self.output = ""
     self.open_tags = []
     self.indent_token = ""
@@ -58,34 +58,22 @@ class Compiler(object):
   
   def compile(self):
     while self.text != "":
-      self.save_current_level_as_previous().process_next_line().process_leading_whitespace(
+      self.process_next_line().process_leading_whitespace(
         ).process_current_level().close_lower_level_tags()
       
       if len(self.stripped_line) > 0:
+        if not self.line_starts_with_tick:
+          self.split_line().process_selector().process_attributes()
         
-        if self.line_starts_with_tick:
-          self.add_html_to_output()
-        
-        else:
-          self.split_line().process_selector().process_attributes().add_html_to_output()
+        self.add_html_to_output()
     
-    # Iterate remaining indentation levels
     while len(self.open_tags) > 0:
-      closing_tag_tuple = self.open_tags.pop()
-      # Append closing HTML tags for indentation level with appropriate indentation at beginning of line
-      if not self.compress:
-        self.output += closing_tag_tuple[0] * self.indent_token
-      self.output += "</" + closing_tag_tuple[1] + ">"
-      if not self.compress:
-        self.output += "\n"
+      self.close_tag()
     
-    return self
-  
-  def save_current_level_as_previous(self):
-    self.previous_level = self.current_level
     return self
   
   def process_next_line(self):
+    self.previous_level = self.current_level
     self.line = ""
     self.line_starts_with_tick = False
     self.inner_text_exists = False
@@ -148,7 +136,7 @@ class Compiler(object):
   def process_leading_whitespace(self):
     self.leading_whitespace = ""
     for i, char in enumerate(self.line):
-      if char not in string.whitespace:
+      if char not in " \t":
         self.leading_whitespace = self.line[:i]
         break
     return self
@@ -178,13 +166,16 @@ class Compiler(object):
     if self.current_level <= self.previous_level:
       # Close all indentations greater than or equal to indentation level of this line
       while len(self.open_tags) > 0 and self.open_tags[len(self.open_tags) - 1][0] >= self.current_level:
-        closing_tag_tuple = self.open_tags.pop()
-        if not self.compress:
-          self.output += closing_tag_tuple[0] * self.indent_token
-        self.output += "</" + closing_tag_tuple[1] + ">"
-        if not self.compress:
-          self.output += "\n"
-    
+        self.close_tag()
+    return self
+  
+  def close_tag(self):
+    closing_tag_tuple = self.open_tags.pop()
+    if not self.compress:
+      self.output += closing_tag_tuple[0] * self.indent_token
+    self.output += "</" + closing_tag_tuple[1] + ">"
+    if not self.compress:
+      self.output += "\n"
     return self
   
   def split_line(self):
@@ -216,7 +207,7 @@ class Compiler(object):
           if None not in [open_text_marker_index, first_tick_index] and first_tick_index < open_text_marker_index:
             temp_split_text = text_copy.split(self.embedding_token)
             text_copy = ''.join(temp_split_text[2:])
-            temp_attr_string += '`'.join(temp_split_text[:2])
+            temp_attr_string += '`'.join(temp_split_text[:2]) + '`'
             
           else:
             open_text_marker_index = text_copy.index('<')
@@ -278,7 +269,7 @@ class Compiler(object):
           if self.selector[0] == '#':
             self.tag_id = self.selector[1:next_delimiter_index]
           elif self.selector[0] == ".":
-            tag_classes.append(self.selector[1:next_delimiter_index])
+            self.tag_classes.append(self.selector[1:next_delimiter_index])
           
           self.selector = self.selector[next_delimiter_index:]
     
