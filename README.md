@@ -98,7 +98,7 @@ Tag designations are modelled after CSS selectors. WieldyMarkup currently only s
 * If you want to specify a tag, then it must come before classes or ID.
 * If there is no ID or class, then you must specify a tag.
 * If there is at least one class or an ID, then no tag will default to a `DIV`.
-* If multiply IDs are present, only the last one will be used.
+* If multiple IDs are present, only the last one will be used.
 
 ### Attributes
 
@@ -107,9 +107,9 @@ The list of attributes begins after the first whitespace character after the beg
 1. A key containing no whitespace characters or an equals sign (`=`)
 2. An equals sign (`=`)
 3. Either:
-> a string starting with a back tick and ending with the next back tick, between which all characters are ignored
-> Or:
-> a string ending either at the innerText designation, the last whitespace character before the next `=`, or the end of the line
+   a string starting with a back tick and ending with the next back tick, between which all characters are ignored
+   Or:
+   a string ending either at the innerText designation, the last whitespace character before the next `=`, or the end of the line
 
 ### InnerText and Self-Closing Designation
 
