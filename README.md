@@ -95,10 +95,10 @@ Each line's Leading whitespace is used to detect it's nesting level. Use either 
 
 Tag designations are modelled after CSS selectors. WieldyMarkup currently only supports tag, class, and ID as part of the selector.
 
-*If you want to specify a tag, then it must come before classes or ID.
-*If there is no ID or class, then you must specify a tag.
-*If there is at least one class or an ID, then no tag will default to a `DIV`.
-*If multiply IDs are present, only the last one will be used.
+-If you want to specify a tag, then it must come before classes or ID.
+-If there is no ID or class, then you must specify a tag.
+-If there is at least one class or an ID, then no tag will default to a `DIV`.
+-If multiply IDs are present, only the last one will be used.
 
 ### Attributes
 
