@@ -41,8 +41,9 @@ html lang=en
         .navbar-inner
           a.brand href=# <Title>
           ul.nav
-            li.active
-              a href=# <Home>
+            li.active \-\ a href=#
+                i.icon-pencil
+                span <Home>
             li
               a href=# <Link>
       form enctype=multipart/form-data
@@ -51,7 +52,6 @@ html lang=en
         input.mustache-template type=text readonly= value={{ val2 }} /
         p <<%= val %> {{ val }} Lorem ipsum dolor sit amet, consectetur adipisicing elit,
           sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.>
-
 ```
 
 ### Corresponding HTML Output:
@@ -69,7 +69,11 @@ html lang=en
           <a class="brand" href="#">Title</a>
           <ul class="nav">
             <li class="active">
-              <a href="#">Home</a>
+              <a href="#">
+                <i class="icon-pencil">
+                </i>
+                <span>Home</span>
+              </a>
             </li>
             <li>
               <a href="#">Link</a>
@@ -90,12 +94,13 @@ html lang=en
 
 ## Guide
 
-There are four parts to each line of WieldyMarkup:
+There are five steps to parsing each line of WieldyMarkup:
 
 1. Leading whitespace
-2. Selector
-3. Attributes
-4. InnerText or self-closing designation
+2. Multi-Tag Delimiter
+3. Selector
+4. Attributes
+5. InnerText or self-closing designation
 
 ### Leading Whitespace
 
@@ -109,6 +114,44 @@ Tag designations are modelled after CSS selectors. WieldyMarkup currently only s
 * If there is no ID or class, then you must specify a tag.
 * If there is at least one class or an ID, then no tag will default to a `DIV`.
 * If multiple IDs are present, only the last one will be used.
+
+### Multi-Tag Delimiter
+
+For designating multiple, nested HTML tags on a single line in WieldyMarkup, use the `\-\` delimiter between them. This is especially useful in a list of links. For example:
+
+```
+ul
+  li.active \-\ a href=# <Home>
+  li \-\ a href=# <Link>
+  li \-\ a href=#
+      i.icon-pencil
+      span <Link>
+  li \-\ a href=# \-\ span <Link>
+```
+
+becomes
+
+```html
+<ul>
+  <li class="active">
+    <a href="#">Home</a>
+  </li>
+  <li>
+    <a href="#">
+      <i class="icon-pencil">
+      </i>
+      <span>Link</span>
+    </a>
+  </li>
+  <li>
+    <a href="#">
+      <span>Link</span>
+    </a>
+  </li>
+</ul>
+```
+
+Be careful nesting inside of an element after it is declared in a multi-tag line. You still have to indent to the proper level for following lines to be nested inside. Note the indentation of `i.icon-pencil` in the example above.
 
 ### Attributes
 

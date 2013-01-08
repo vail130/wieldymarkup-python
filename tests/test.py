@@ -225,6 +225,18 @@ class TestCompiler(unittest.TestCase):
     c.text = "div href=# <asdf \n asdf ;lkj <%= val %>>\ndiv"
     c.process_next_line()
     self.assertEqual(c.inner_text, "asdf asdf ;lkj <%= val %>")
+    
+    c = Compiler()
+    c.indent_token = "  "
+    c.text = "div \-\ a href=# <asdf>"
+    c.process_next_line()
+    self.assertEqual(c.output, '<div>\n  <a href="#">asdf</a>\n')
+  
+    c = Compiler()
+    c.indent_token = "  "
+    c.text = "div \-\ a href=# target=_blank \-\ span <asdf>"
+    c.process_next_line()
+    self.assertEqual(c.output, '<div>\n  <a href="#" target="_blank">\n    <span>asdf</span>\n')
   
   def test_add_html_to_output(self):
     c = Compiler()

@@ -6,7 +6,6 @@ class CompilerException(Exception):
 
 class Compiler(object):
   # TODO: Add support for multi-line embedded HTML via "```"
-  # TODO: Add support for multiple tags in a single line via "\" delimeter
   # TODO: Improve error reporting for bad syntax
   
   embedding_token = '`'
@@ -166,9 +165,8 @@ class Compiler(object):
       line = self.text.strip()
       self.text = ""
     
-    if len(line) > 0:
-      self.line_number += 1
-    else:
+    self.line_number += 1
+    if len(line) is 0:
       return self
     
     # Whole line embedded HTML, starting with back ticks:
@@ -176,6 +174,32 @@ class Compiler(object):
       self.process_embedded_line(line)
     
     else:
+      # Support multiple tags on one line via "\-\" delimiter
+      while True:
+        line_split_list = line.split('\\-\\')
+        lines = [line_split_list[0]]
+        
+        if len(line_split_list) is 1:
+          line = line_split_list[0].strip()
+          break
+        else:
+          lines.append('\\-\\'.join(line_split_list[1:]))
+        
+        lines[0] = lines[0].strip()
+        selector = self.__class__.get_selector_from_stripped_line(lines[0])
+        self.process_selector(copy.copy(selector))
+        rest_of_line = lines[0][len(selector):].strip()
+        rest_of_line = self.process_attributes(rest_of_line)
+        self.add_html_to_output()
+        
+        self.tag = None
+        self.tag_id = None
+        self.tag_classes = []
+        self.tag_attributes = []
+        self.previous_level = self.current_level
+        self.current_level += 1
+        line = '\\-\\'.join(lines[1:])
+      
       selector = self.__class__.get_selector_from_stripped_line(line)
       self.process_selector(copy.copy(selector))
       rest_of_line = line[len(selector):].strip()
