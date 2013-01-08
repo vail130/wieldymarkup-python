@@ -22,6 +22,8 @@ class Compiler(object):
   # TODO: Add support for multiple tags in a single line via "\" delimeter
   # TODO: Improve error reporting for bad syntax
   
+  embedding_token = '`'
+  
   @staticmethod
   def remove_grouped_text(text, z):
     output = ""
@@ -44,6 +46,65 @@ class Compiler(object):
       status = not status
     return output
   
+  @staticmethod
+  def get_selector_from_stripped_line(line):
+    first_whitespace_index = None
+    for i, char in enumerate(line):
+      if char in string.whitespace:
+        first_whitespace_index = i
+        break
+    if first_whitespace_index is None:
+      return line
+    else:
+      return line[:first_whitespace_index]
+  
+  @staticmethod
+  def get_tag_nest_level(text, open_string='<', close_string='>'):
+    text = copy.copy(text)
+    nest_level = 0
+    while True:
+      open_string_index = text.index(open_string) if open_string in text else None
+      close_string_index = text.index(close_string) if close_string in text else None
+      open_string_first = False
+      close_string_first = False
+      
+      # Only same if both None
+      if open_string_index is close_string_index:
+        break
+      elif open_string_index is not None:
+        open_string_first = True
+      elif close_string_index is not None:
+        close_string_first = True
+      else:
+        if open_string_index < close_string_index:
+          open_string_first = True
+        else:
+          close_string_first = True
+      
+      if open_string_first:
+        nest_level += 1
+        if len(text) is open_string_index+len(open_string):
+          break
+        else:
+          text = text[open_string_index+len(open_string):]
+      elif close_string_first:
+        nest_level -= 1
+        if len(text) is close_string_index+len(close_string):
+          break
+        else:
+          text = text[close_string_index+len(close_string):]
+    
+    return nest_level
+  
+  @staticmethod
+  def get_leading_whitespace_from_text(text):
+    leading_whitespace = ""
+    for i, char in enumerate(text):
+      if char not in " \t":
+        leading_whitespace = text[:i]
+        break
+    return leading_whitespace
+  
   def __init__(self, text="", compress=False):
     self.output = ""
     self.open_tags = []
@@ -52,112 +113,36 @@ class Compiler(object):
     self.previous_level = None
     self.text = text
     self.line_number = 0
-    self.embedding_token = '`'
     self.compress = compress
     if self.text != "":
       self.compile()
   
   def compile(self):
     while self.text != "":
-      self.process_next_line().process_leading_whitespace(
-        ).process_current_level().close_lower_level_tags()
+      self.process_current_level().close_lower_level_tags().process_next_line()
       
-      if len(self.stripped_line) > 0:
-        if not self.line_starts_with_tick:
-          self.split_line().process_selector().process_attributes()
-        
-        self.add_html_to_output()
-    
     while len(self.open_tags) > 0:
       self.close_tag()
     
     return self
   
-  def process_next_line(self):
-    self.previous_level = self.current_level
-    self.line = ""
-    self.line_starts_with_tick = False
-    self.inner_text_exists = False
-    self.self_closing = False
-    
-    if "\n" in self.text:
-      line_break_index = self.text.index("\n")
-      self.line = self.text[:line_break_index].rstrip()
-      self.text = self.text[line_break_index+1:]
-    else:
-      self.line = self.text.rstrip()
-      self.text = ""
-    
-    self.stripped_line = self.line.strip()
-    
-    if len(self.stripped_line) > 0:
-      self.line_number += 1
-    else:
-      return self
-    
-    # Whole line embedded HTML, starting and ending with back ticks:
-    # `content here`
-    if self.stripped_line[0] == self.embedding_token:
-      self.line = self.line.replace('`', '')
-      self.line_starts_with_tick = True
-    
-    else:
-      # Standard markup
-      line_without_ticked_groups = self.__class__.remove_grouped_text(self.line, self.embedding_token)
-      # innerText is present
-      if '<' in line_without_ticked_groups:
-        self.inner_text_exists = True
-        
-        # innerText spilling to proceeding lines
-        while '>' not in self.__class__.remove_grouped_text(self.line, self.embedding_token):
-          if self.text == "":
-            raise CompilerException("Unmatched '<' found on line " + str(self.line_number))
-          
-          elif "\n" in self.text:
-            line_break_index = self.text.index("\n")
-            # Guarantee only one space between text between lines.
-            self.line += ' ' + self.text[:line_break_index].strip()
-            if len(self.text) == line_break_index + 1:
-              self.text = ""
-            else:
-              self.text = self.text[line_break_index+1:]
-          
-          else:
-            self.line += self.text
-            self.text = ""
-    
-        self.stripped_line = self.line.strip()
-      
-      elif self.line[-1] == '/':
-          self.self_closing = True
-          self.line = self.line[:-1].rstrip()
-    
-    return self
-  
-  def process_leading_whitespace(self):
-    self.leading_whitespace = ""
-    for i, char in enumerate(self.line):
-      if char not in " \t":
-        self.leading_whitespace = self.line[:i]
-        break
-    return self
-  
   def process_current_level(self):
-    if self.leading_whitespace == "":
+    self.previous_level = self.current_level
+    leading_whitespace = self.__class__.get_leading_whitespace_from_text(self.text)
+    if leading_whitespace == "":
       self.current_level = 0
     
     # If there is leading whitespace but indent_token is still empty string
     elif self.indent_token == "":
-      self.indent_token = self.leading_whitespace
+      self.indent_token = leading_whitespace
       self.current_level = 1
     
     # Else, set current_level to number of repetitions of index_token in leading_whitespace
     else:
       i = 0
-      while self.leading_whitespace.startswith(self.indent_token):
+      while leading_whitespace.startswith(self.indent_token):
         i += 1
-        self.leading_whitespace = self.leading_whitespace[len(self.indent_token):]
-      
+        leading_whitespace = leading_whitespace[len(self.indent_token):]
       self.current_level = i
     
     return self
@@ -179,179 +164,202 @@ class Compiler(object):
       self.output += "\n"
     return self
   
-  def split_line(self):
-    # Find first occurence of whitespace
-    first_whitespace_index = None
-    for i, char in enumerate(self.stripped_line):
-      if char in string.whitespace:
-        first_whitespace_index = i
-        break
+  def process_next_line(self):
+    self.line_starts_with_tick = False
+    self.self_closing = False
+    self.inner_text = None
     
-    # Split the stripped_line into 2 pieces at the first occurence of whitespace
-    if first_whitespace_index is None:
-      self.selector = self.stripped_line
-      everything_else = ""
+    line = ""
+    
+    if "\n" in self.text:
+      line_break_index = self.text.index("\n")
+      line = self.text[:line_break_index].strip()
+      self.text = self.text[line_break_index+1:]
+    else:
+      line = self.text.strip()
+      self.text = ""
+    
+    if len(line) > 0:
+      self.line_number += 1
+    else:
+      return self
+    
+    # Whole line embedded HTML, starting with back ticks:
+    if line[0] == self.__class__.embedding_token:
+      self.process_embedded_line(line)
     
     else:
-      self.selector = self.stripped_line[0:first_whitespace_index]
-      everything_else = self.stripped_line[first_whitespace_index:].strip()
-    
-    if self.inner_text_exists:
-      # Get innerText without removing any embedded text from it
-      if self.embedding_token in everything_else:
-        text_copy = copy.copy(everything_else)
-        temp_attr_string = ""
-        while True:
-          open_text_marker_index = text_copy.index('<') if '<' in text_copy else None
-          first_tick_index = text_copy.index(self.embedding_token) if self.embedding_token in text_copy else None
+      selector = self.__class__.get_selector_from_stripped_line(line)
+      self.process_selector(copy.copy(selector))
+      rest_of_line = line[len(selector):].strip()
+      rest_of_line = self.process_attributes(rest_of_line)
+      
+      if rest_of_line.startswith('<'):
+        self.inner_text = rest_of_line
+        if self.__class__.get_tag_nest_level(self.inner_text) < 0:
+          raise CompilerException("Too many '>' found on line " + str(self.line_number))
+        
+        while self.__class__.get_tag_nest_level(self.inner_text) > 0:
+          if self.text == "":
+            raise CompilerException("Unmatched '<' found on line " + str(self.line_number))
           
-          if None not in [open_text_marker_index, first_tick_index] and first_tick_index < open_text_marker_index:
-            temp_split_text = text_copy.split(self.embedding_token)
-            text_copy = ''.join(temp_split_text[2:])
-            temp_attr_string += '`'.join(temp_split_text[:2]) + '`'
-            
+          elif "\n" in self.text:
+            line_break_index = self.text.index("\n")
+            # Guarantee only one space between text between lines.
+            self.inner_text += ' ' + self.text[:line_break_index].strip()
+            if len(self.text) == line_break_index + 1:
+              self.text = ""
+            else:
+              self.text = self.text[line_break_index+1:]
+          
           else:
-            open_text_marker_index = text_copy.index('<')
-            self.inner_text = text_copy[open_text_marker_index:].strip(string.whitespace + '<>').replace('`', '')
-            self.attribute_string = (temp_attr_string + text_copy[:open_text_marker_index]).strip()
-            break
+            self.inner_text += self.text
+            self.text = ""
+        
+        self.inner_text = self.inner_text.strip()[1:-1]
       
-      else:
-        open_text_marker_index = everything_else.index('<')
-        self.inner_text = everything_else[open_text_marker_index:].strip(string.whitespace + '<>')
-        self.attribute_string = everything_else[:open_text_marker_index].strip()
+      elif rest_of_line.startswith('/'):
+        if len(rest_of_line) > 0 and rest_of_line[-1] == '/':
+          self.self_closing = True
       
-    else:
-      self.inner_text = None
-      self.attribute_string = everything_else
+      self.add_html_to_output()
     
     return self
   
-  def process_selector(self):
+  def process_embedded_line(self, line):
+    self.line_starts_with_tick = True
+    if not self.compress:
+      self.output += self.current_level * self.indent_token
+    self.output += line[1:]
+    if not self.compress:
+      self.output += "\n"
+    return self
+  
+  def process_selector(self, selector):
     # Parse the first piece as a selector, defaulting to DIV tag if none is specified
-    if len(self.selector) > 0 and self.selector[0] in ['#', '.']:
+    if len(selector) > 0 and selector[0] in ['#', '.']:
       self.tag = 'div'
     else:
       delimiter_index = None
-      for i, char in enumerate(self.selector):
+      for i, char in enumerate(selector):
         if char in ['#', '.']:
           delimiter_index = i
           break
       
       if delimiter_index is None:
-        self.tag = self.selector
-        self.selector = ""
+        self.tag = selector
+        selector = ""
       else:
-        self.tag = self.selector[:delimiter_index]
-        self.selector = self.selector[len(self.tag):]
+        self.tag = selector[:delimiter_index]
+        selector = selector[len(self.tag):]
     
     self.tag_id = None
     self.tag_classes = []
     while True:
       next_delimiter_index = None
-      if self.selector == "":
+      if selector == "":
         break
       
       else:
-        for i, char in enumerate(self.selector):
+        for i, char in enumerate(selector):
           if i > 0 and char in ['#', '.']:
             next_delimiter_index = i
             break
         
         if next_delimiter_index is None:
-          if self.selector[0] == '#':
-            self.tag_id = self.selector[1:]
-          elif self.selector[0] == ".":
-            self.tag_classes.append(self.selector[1:])
+          if selector[0] == '#':
+            self.tag_id = selector[1:]
+          elif selector[0] == ".":
+            self.tag_classes.append(selector[1:])
           
-          self.selector = ""
+          selector = ""
         
         else:
-          if self.selector[0] == '#':
-            self.tag_id = self.selector[1:next_delimiter_index]
-          elif self.selector[0] == ".":
-            self.tag_classes.append(self.selector[1:next_delimiter_index])
+          if selector[0] == '#':
+            self.tag_id = selector[1:next_delimiter_index]
+          elif selector[0] == ".":
+            self.tag_classes.append(selector[1:next_delimiter_index])
           
-          self.selector = self.selector[next_delimiter_index:]
+          selector = selector[next_delimiter_index:]
     
     return self
     
-  def process_attributes(self):
+  def process_attributes(self, rest_of_line):
     self.tag_attributes = []
-    while self.attribute_string != "":
+    while rest_of_line != "":
       # If '=' doesn't exist, empty attribute string and break from loop
-      if '=' not in self.attribute_string:
-        self.attribute_string = ""
+      if '=' not in rest_of_line:
+        break
+      elif '=' in rest_of_line and '<' in rest_of_line and rest_of_line.index('<') < rest_of_line.index('='):
         break
       
-      first_equals_index = self.attribute_string.index('=')
-      parse_normal = True
+      first_equals_index = rest_of_line.index('=')
+      embedded_attribute = False
       
-      # If '`' exists
-      if self.embedding_token in self.attribute_string:
-        parse_normal = False
+      if rest_of_line[first_equals_index+1:first_equals_index+3] == '{{':
+        embedded_attribute = True
+        try:
+          close_index = rest_of_line.index('}}')
+        except ValueError:
+          raise CompilerException("Unmatched '{{' found in line " + str(self.line_number))
+      elif rest_of_line[first_equals_index+1:first_equals_index+3] == '<%':
+        embedded_attribute = True
+        try:
+          close_index = rest_of_line.index('%>')
+        except ValueError:
+          raise CompilerException("Unmatched '<%' found in line " + str(self.line_number))
+      
+      if embedded_attribute:
+        current_attribute = rest_of_line[:close_index+2]
+        if len(rest_of_line) == close_index+2:
+          rest_of_line = ""
+        else:
+          rest_of_line = rest_of_line[close_index+2:]
+      
+      elif len(rest_of_line) == first_equals_index+1:
+        current_attribute = rest_of_line.strip()
+        rest_of_line = ""
+      
+      elif '=' not in rest_of_line[first_equals_index+1:]:
+        if '<' in rest_of_line:
+          current_attribute = rest_of_line[:rest_of_line.index('<')].strip()
+          rest_of_line = rest_of_line[rest_of_line.index('<'):]
+        else:
+          current_attribute = rest_of_line
+          rest_of_line = ""
+      
+      else:
+        second_equals_index = rest_of_line[first_equals_index+1:].index('=')
+        reversed_letters_between_equals = list(rest_of_line[first_equals_index+1:first_equals_index+1+second_equals_index])
+        reversed_letters_between_equals.reverse()
         
-        # If '=' occurs after an embedding token, raise CompilerException
-        if self.attribute_string.index(self.embedding_token) < first_equals_index:
-          raise CompilerException("No '=' before '`' in line " + str(self.line_number))
-        
-        # If embedding token occurs immediately after '='
-        elif self.attribute_string.index(self.embedding_token) == first_equals_index + 1:
-          first_tick_index = first_equals_index + 1
-          if len(self.attribute_string) == first_tick_index + 1 or self.embedding_token not in self.attribute_string[first_tick_index+1:]:
-            raise CompilerException("Unmatched '`' found in line " + str(self.line_number))
+        whitespace_index = None
+        for i, char in enumerate(reversed_letters_between_equals):
+          try:
+            string.whitespace.index(char)
+          except (IndexError, ValueError):
+            pass
           else:
-            second_tick_index = self.attribute_string[first_tick_index + 1:].index(self.embedding_token)
-            current_attribute = self.attribute_string[:first_tick_index+1+second_tick_index].replace(self.embedding_token, '')
-            if len(self.attribute_string) == first_tick_index+1+second_tick_index+1:
-              self.attribute_string = ""
-            else:
-              self.attribute_string = self.attribute_string[first_tick_index+1+second_tick_index+1:]
-        
-        else:
-          parse_normal = True
-        
-      if parse_normal:
-        if len(self.attribute_string) == first_equals_index+1 or '=' not in self.attribute_string[first_equals_index+1:]:
-          current_attribute = self.attribute_string.strip()
-          self.attribute_string = ""
-        
-        else:
-          second_equals_index = self.attribute_string[first_equals_index+1:].index('=')
-          reversed_letters_between_equals = list(self.attribute_string[first_equals_index+1:first_equals_index+1+second_equals_index])
-          reversed_letters_between_equals.reverse()
-          
-          whitespace_index = None
-          for i, char in enumerate(reversed_letters_between_equals):
-            try:
-              string.whitespace.index(char)
-            except (IndexError, ValueError):
-              pass
-            else:
-              whitespace_index = first_equals_index+1+second_equals_index - i
-              break
-          
-          if whitespace_index is None:
-            # TODO: Do some error reporting here
+            whitespace_index = first_equals_index+1+second_equals_index - i
             break
-          
-          current_attribute = self.attribute_string[:whitespace_index].strip()
-          self.attribute_string = self.attribute_string[whitespace_index:]
+        
+        if whitespace_index is None:
+          # TODO: Do some error reporting here
+          break
+        
+        current_attribute = rest_of_line[:whitespace_index].strip()
+        rest_of_line = rest_of_line[whitespace_index:]
       
-      equals_index = current_attribute.index('=')
-      self.tag_attributes.append(
-        ' ' + current_attribute[:equals_index] + '="' + current_attribute[equals_index+1:] + '"'
-      )
+      if current_attribute is not None:
+        equals_index = current_attribute.index('=')
+        self.tag_attributes.append(
+          ' ' + current_attribute[:equals_index] + '="' + current_attribute[equals_index+1:] + '"'
+        )
     
-    return self
+    return rest_of_line.strip()
 
   def add_html_to_output(self):
-    if self.line_starts_with_tick:
-      self.output += self.line
-      if not self.compress:
-        self.output += "\n"
-    
-    else:
+    if not self.line_starts_with_tick:
       tag_html = "<" + self.tag
       
       if self.tag_id is not None:

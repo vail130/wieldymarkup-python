@@ -9,26 +9,6 @@ from wieldymarkup.compile import Compiler, CompilerException
 
 class TestCompiler(unittest.TestCase):
 
-  def setUp(self):
-    pass
-
-  def test_init_values(self):
-    c = Compiler()
-    comparison_values = [
-      ('output', ''),
-      ('open_tags', []),
-      ('indent_token', ''),
-      ('current_level', 0),
-      ('previous_level', None),
-      ('text', ''),
-      ('line_number', 0),
-      ('embedding_token', '`'),
-      ('compress', False),
-    ]
-    
-    for cv in comparison_values:
-      self.assertEqual(getattr(c, cv[0]), cv[1])
-  
   def test_remove_grouped_text(self):
     c = Compiler()
     sample = "The cat ran 'into the big 'home!"
@@ -45,89 +25,79 @@ class TestCompiler(unittest.TestCase):
     expected = "The cat ran home!"
     self.assertEqual(c.__class__.remove_grouped_text(sample, "`"), expected)
   
-  def test_process_next_line(self):
-    c = Compiler()
-    c.text = "div\ndiv"
-    c.process_next_line()
-    self.assertEqual(c.line, "div")
-    self.assertEqual(c.text, "div")
-   
-    c = Compiler()
-    c.text = "div.class#id data-val=val data-val2=val2\ndiv\n"
-    c.process_next_line()
-    self.assertEqual(c.line, "div.class#id data-val=val data-val2=val2")
-    self.assertEqual(c.text, "div\n")
+  def test_get_selector_from_stripped_line(self):
+    line = "div.class#id data-val=val data-val2=<%= val2 %> <Content <i>haya!</i> goes here>"
+    self.assertEqual(Compiler.get_selector_from_stripped_line(line), "div.class#id")
     
-    c = Compiler()
-    c.text = "div.class#id data-val=val data-val2=val2 <Content goes here>\ndiv"
-    c.process_next_line()
-    self.assertEqual(c.line, "div.class#id data-val=val data-val2=val2 <Content goes here>")
-    self.assertEqual(c.inner_text_exists, True)
-    self.assertEqual(c.line_starts_with_tick, False)
+    line = "div"
+    self.assertEqual(Compiler.get_selector_from_stripped_line(line), "div")
     
-    c = Compiler()
-    c.text = "input.class#id type=text value=Content goes here / \ndiv"
-    c.process_next_line()
-    self.assertEqual(c.line, "input.class#id type=text value=Content goes here")
-    self.assertEqual(c.self_closing, True)
+    line = ".class#id.class2 val=val1"
+    self.assertEqual(Compiler.get_selector_from_stripped_line(line), ".class#id.class2")
+  
+  def test_get_tag_nest_level(self):
+    text = "  <div>"
+    self.assertEqual(Compiler.get_tag_nest_level(text), 0)
     
-    c = Compiler()
-    c.text = "div.class#id data-val=val data-val2=val2 <Content goes\nhere>\ndiv"
-    c.process_next_line()
-    self.assertEqual(c.line, "div.class#id data-val=val data-val2=val2 <Content goes here>")
-    self.assertEqual(c.inner_text_exists, True)
+    text = "  <div <la;sdfajsd;f> dfajsl;fadfl   >"
+    self.assertEqual(Compiler.get_tag_nest_level(text), 0)
     
-    c = Compiler()
-    c.text = "div.class#id data-val=val data-val2=val2 <Content goes\nhere\ndiv"
-    self.assertRaises(CompilerException, c.process_next_line)
+    text = "  <div <la;sdfajsd;f dfajsl;fadfl   >"
+    self.assertEqual(Compiler.get_tag_nest_level(text), 1)
     
-    c = Compiler()
-    c.text = "    div.class#id data-val=val data-val2=`<%= val2 %>` <Content `<i>haya!</i>` goes\nhere>\ndiv"
-    c.process_next_line()
-    self.assertEqual(c.line, "    div.class#id data-val=val data-val2=`<%= val2 %>` <Content `<i>haya!</i>` goes here>")
-    self.assertEqual(c.stripped_line, "div.class#id data-val=val data-val2=`<%= val2 %>` <Content `<i>haya!</i>` goes here>")
-    self.assertEqual(c.inner_text_exists, True)
+    text = "  <div la;sdfajsd;f> dfajsl;fadfl   >"
+    self.assertEqual(Compiler.get_tag_nest_level(text), -1)
     
-    c = Compiler()
-    c.text = "`<div class='class' id='id'>Content goes here</div>\ndiv"
-    c.process_next_line()
-    self.assertEqual(c.line, "<div class='class' id='id'>Content goes here</div>")
-    self.assertEqual(c.line_starts_with_tick, True)
+    text = "  {{div {{la;sdfajsd;f}} dfajsl;fadfl   }}"
+    self.assertEqual(Compiler.get_tag_nest_level(text, '{{', '}}'), 0)
+  
+  def test_get_leading_whitespace_from_text(self):
+    line = "    `<div class='class' id='id'>Content goes here</div>"
+    self.assertEqual(Compiler.get_leading_whitespace_from_text(line), "    ")
     
-  def test_process_leading_whitespace(self):
-    c = Compiler()
-    c.line = "    `<div class='class' id='id'>Content goes here</div>"
-    c.process_leading_whitespace()
-    self.assertEqual(c.leading_whitespace, "    ")
+    line = "\t\tdiv.class#id data-val=val data-val2=<%= val2 %> <Content <i>haya!</i> goes here>"
+    self.assertEqual(Compiler.get_leading_whitespace_from_text(line), "\t\t")
     
+    line = "\n  div.class#id data-val=val data-val2=<%= val2 %> <Content <i>haya!</i> goes here>"
+    self.assertEqual(Compiler.get_leading_whitespace_from_text(line), "")
+  
+  def test_init_values(self):
     c = Compiler()
-    c.line = "\t\tdiv.class#id data-val=val data-val2=`<%= val2 %>` <Content `<i>haya!</i>` goes here>"
-    c.process_leading_whitespace()
-    self.assertEqual(c.leading_whitespace, "\t\t")
+    comparison_values = [
+      ('output', ''),
+      ('open_tags', []),
+      ('indent_token', ''),
+      ('current_level', 0),
+      ('previous_level', None),
+      ('text', ''),
+      ('line_number', 0),
+      ('compress', False),
+    ]
     
-    c = Compiler()
-    c.line = "\n  div.class#id data-val=val data-val2=`<%= val2 %>` <Content `<i>haya!</i>` goes here>"
-    c.process_leading_whitespace()
-    self.assertEqual(c.leading_whitespace, "")
+    for cv in comparison_values:
+      self.assertEqual(getattr(c, cv[0]), cv[1])
   
   def test_process_current_level(self):
     c = Compiler()
-    c.leading_whitespace = "    "
+    c.text = "    div"
     c.process_current_level()
+    self.assertEqual(c.previous_level, 0)
     self.assertEqual(c.current_level, 1)
     self.assertEqual(c.indent_token, "    ")
     
     c = Compiler()
-    c.leading_whitespace = "    "
+    c.text = "    div"
     c.indent_token = "  "
     c.process_current_level()
+    self.assertEqual(c.previous_level, 0)
     self.assertEqual(c.current_level, 2)
     self.assertEqual(c.indent_token, "  ")
     
     c = Compiler()
-    c.leading_whitespace = "\t\t"
+    c.text = "\t\tdiv"
     c.indent_token = "\t"
     c.process_current_level()
+    self.assertEqual(c.previous_level, 0)
     self.assertEqual(c.current_level, 2)
     self.assertEqual(c.indent_token, "\t")
     
@@ -171,56 +141,119 @@ class TestCompiler(unittest.TestCase):
     c.close_lower_level_tags()
     self.assertEqual(c.output, "</span></div></div>")
   
-  def test_split_line(self):
+  def test_process_embedded_line(self):
     c = Compiler()
-    c.stripped_line = "div"
-    c.inner_text_exists = False
-    c.split_line()
-    self.assertEqual(c.selector, "div")
-    self.assertEqual(c.attribute_string, "")
-    self.assertEqual(c.inner_text, None)
+    c.current_level = 2
+    c.indent_token = "  "
+    c.process_embedded_line("`<div>")
+    self.assertEqual(c.output, "    <div>\n")
     
     c = Compiler()
-    c.stripped_line = "div.class#id data-val=val"
-    c.inner_text_exists = False
-    c.split_line()
-    self.assertEqual(c.selector, "div.class#id")
-    self.assertEqual(c.attribute_string, "data-val=val")
-    self.assertEqual(c.inner_text, None)
+    c.current_level = 3
+    c.indent_token = "\t"
+    c.process_embedded_line("`<div>")
+    self.assertEqual(c.output, "\t\t\t<div>\n")
     
-    c = Compiler()
-    c.inner_text_exists = True
-    c.stripped_line = "div.class#id data-val=val data-val2=`<%= val2 %>` <Content `<i>haya!</i>` goes here>"
-    c.split_line()
-    self.assertEqual(c.selector, "div.class#id")
-    self.assertEqual(c.attribute_string, "data-val=val data-val2=`<%= val2 %>`")
-    self.assertEqual(c.inner_text, "Content <i>haya!</i> goes here")
+    c = Compiler('', compress=True)
+    c.current_level = 3
+    c.indent_token = "\t"
+    c.process_embedded_line("`<div>")
+    self.assertEqual(c.output, "<div>")
   
   def test_process_selector(self):
     c = Compiler()
-    c.selector = "div"
-    c.process_selector()
+    c.process_selector("div")
     self.assertEqual(c.tag, "div")
     self.assertEqual(c.tag_id, None)
     self.assertEqual(c.tag_classes, [])
     
     c = Compiler()
-    c.selector = ".class#id"
-    c.process_selector()
-    self.assertEqual(c.tag, "div")
+    c.process_selector("span.class1#id.class2")
+    self.assertEqual(c.tag, "span")
     self.assertEqual(c.tag_id, "id")
-    self.assertEqual(c.tag_classes, ['class'])
+    self.assertEqual(c.tag_classes, ["class1", "class2"])
     
     c = Compiler()
-    c.selector = "input.class1#id1.class2#id2"
-    c.process_selector()
-    self.assertEqual(c.tag, "input")
-    self.assertEqual(c.tag_id, "id2")
-    self.assertEqual(c.tag_classes, ['class1', 'class2'])
+    c.process_selector("#id.class")
+    self.assertEqual(c.tag, "div")
+    self.assertEqual(c.tag_id, "id")
+    self.assertEqual(c.tag_classes, ["class"])
   
   def test_process_attributes(self):
-    pass
+    c = Compiler()
+    rest_of_line = c.process_attributes("")
+    self.assertEqual(c.tag_attributes, [])
+    self.assertEqual(rest_of_line, "")
+    
+    c = Compiler()
+    rest_of_line = c.process_attributes("href=# target=_blank")
+    self.assertEqual(c.tag_attributes, [' href="#"', ' target="_blank"'])
+    self.assertEqual(rest_of_line, "")
+    
+    c = Compiler()
+    rest_of_line = c.process_attributes("href=# <asdf>")
+    self.assertEqual(c.tag_attributes, [' href="#"'])
+    self.assertEqual(rest_of_line, "<asdf>")
+    
+    c = Compiler()
+    rest_of_line = c.process_attributes("val1=val1 data-val2=<%= val2 %> <asdf>")
+    self.assertEqual(c.tag_attributes, [' val1="val1"', ' data-val2="<%= val2 %>"'])
+    self.assertEqual(rest_of_line, "<asdf>")
+    
+    c = Compiler()
+    rest_of_line = c.process_attributes("val1=val1 data-val2=<%= val2 %> <asdf <%= val3 %>>")
+    self.assertEqual(c.tag_attributes, [' val1="val1"', ' data-val2="<%= val2 %>"'])
+    self.assertEqual(rest_of_line, "<asdf <%= val3 %>>")
+  
+  def test_process_next_line(self):
+    c = Compiler()
+    c.text = "div\ndiv"
+    c.process_next_line()
+    self.assertEqual(c.inner_text, None)
+    
+    c = Compiler()
+    c.text = "div <asdf>\ndiv"
+    c.process_next_line()
+    self.assertEqual(c.inner_text, "asdf")
+    
+    c = Compiler()
+    c.text = "div <<%= val %> asdf>\ndiv"
+    c.process_next_line()
+    self.assertEqual(c.inner_text, "<%= val %> asdf")
+    
+    c = Compiler()
+    c.text = "div href=# <asdf \n asdf ;lkj <%= val %>>\ndiv"
+    c.process_next_line()
+    self.assertEqual(c.inner_text, "asdf asdf ;lkj <%= val %>")
   
   def test_add_html_to_output(self):
-    pass
+    c = Compiler()
+    c.line_starts_with_tick = True
+    c.add_html_to_output()
+    self.assertEqual(c.output, '')
+    
+    c = Compiler()
+    c.line_starts_with_tick = False
+    c.tag = 'input'
+    c.tag_id = 'name-input'
+    c.tag_classes = ['class1', 'class2']
+    c.tag_attributes = [
+      ' type="text"',
+      ' value="Value"'
+    ]
+    c.self_closing = True
+    c.add_html_to_output()
+    self.assertEqual(c.output, '<input id="name-input" class="class1 class2" type="text" value="Value" />\n')
+    
+    c = Compiler()
+    c.line_starts_with_tick = False
+    c.compress = True
+    c.tag = 'span'
+    c.tag_id = None
+    c.tag_classes = []
+    c.tag_attributes = []
+    c.self_closing = False
+    c.inner_text = "<%= val1 %>"
+    c.add_html_to_output()
+    self.assertEqual(c.output, '<span><%= val1 %></span>')
   

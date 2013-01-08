@@ -3,7 +3,7 @@
 
 ## tl;dr
 
-WieldyMarkup is an HTML abstraction markup language, similar in many ways to [Haml](http://haml.info) and [Jade](http://jade-lang.com/). However, WieldyMarkup is meant to be part of the build & deploy process, not the page serving process. It's probably best for writing static HTML pages and Underscore / jQuery / Mustache templates.
+WieldyMarkup is an HTML abstraction markup language, similar in many ways to [Haml](http://haml.info) and [Jade](http://jade-lang.com/). However, WieldyMarkup does not do any interpolation (currently), and is meant to be part of the build & deploy process, not the page serving process. It's probably best for writing static HTML pages and templates that use Underscore or Mustache templating languages, as well.
 
 ## Usage
 
@@ -17,6 +17,13 @@ python /path/to/wieldymarkup /path/to/text_file_1.txt /path/to/text_file_2.txt
 
 ```shell
 python /path/to/wieldymarkup -c /path/to/text_file_1.txt /path/to/text_file_2.txt
+```
+
+## Testing
+
+```shell
+cd /path/to/wieldymarkup
+nosetests
 ```
 
 ## Indicative Example
@@ -40,9 +47,11 @@ html lang=en
               a href=# <Link>
       form enctype=multipart/form-data
         `<% var d = new Date(); %>
-        input type=text readonly= value=`<%= d.getDate() %>` /
-        p <`<%= val %>` Lorem ipsum dolor sit amet, consectetur adipisicing elit,
+        input.underscore-template type=text readonly= value=<%= d.getDate() %> /
+        input.mustache-template type=text readonly= value={{ val2 }} /
+        p <<%= val %> {{ val }} Lorem ipsum dolor sit amet, consectetur adipisicing elit,
           sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.>
+
 ```
 
 ### Corresponding HTML Output:
@@ -70,8 +79,9 @@ html lang=en
       </div>
       <form enctype="multipart/form-data">
         <% var d = new Date(); %>
-        <input type="text" readonly="" value="<%= d.getDate() %>" />
-        <p><%= val %> Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <input class="underscore-template" type="text" readonly="" value="<%= d.getDate() %>" />
+        <input class="mustache-template" type="text" readonly="" value="{{ val2 }}" />
+        <p><%= val %> {{ val }} Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
       </form>
     </div>
   </body>
@@ -106,8 +116,10 @@ The list of attributes begins after the first whitespace character after the beg
 
 1. A key containing no whitespace characters or an equals sign (`=`)
 2. An equals sign (`=`)
-3. Either (1) a string starting with a back tick and ending with the next back tick, between which all characters are ignored, or (2) a string ending either at the innerText designation, the last whitespace character before the next `=`, or the end of the line
+3. Either (1) a string starting with `<%` or `{{` and ending with `%>` or `}}`, between which all characters are ignored, or (2) a string ending either at the innerText designation, the last whitespace character before the next `=`, or the end of the line
 
 ### InnerText and Self-Closing Designation
 
-If the line ends with `/`, then the tag will be treated as self-closing. If `<` occurs outside of back ticks in the line, then the compiler will consider everything after `<` and before the next `>` in the entire file to be the innerText of the current tag. Anything grouped inside of back ticks within the opening `<` and closing `>` is ignored, even `<` and `>` themselves. The compiler will raise an exception if a closing `>` is not found. Leading whitespace for continuing lines of innerText is ignored and transformed into a single space.
+If the line ends with `/`, then the tag will be treated as self-closing.
+
+If the line ends with innerText wrapped in `<` and `>`, or if the innerText spills over into proceeding lines and eventually ends with `>`, then everything between `<` and `>` will be designated as innerText for the HTML tag. The compiler will leave instances of `<% [anything here] %>`, as long as each instance is opened and closed on the same line; this restriction does not apply to `{{ [anything here] }}`. Leading whitespace for continuing lines of innerText is ignored and transformed into a single space.
