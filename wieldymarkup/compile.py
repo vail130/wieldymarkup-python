@@ -5,19 +5,6 @@ class CompilerException(Exception):
   pass
 
 class Compiler(object):
-  """
-  Compiles WieldyMarkup to HTML. Each line can take one of the following forms:
-    1. selector
-    2. selector#id.class href=#
-    3. selector#id.class <innerText>
-    4. selector.class#id.class data-val=`<%= val %>` <innerText>
-    5. input type=text value=This tag is self-closing if line ends with "/" /
-    6. selector.class#id.class data-val={{val}} <innerText with embedded `<%= val %>`>
-    7. selector#adf.asdf.asf href=# target=_blank data-val=`<%= val %>` <text with embedded
-       `<%= val %>` that can spill onto subsequent lines>
-    8. `<div id='asdf' class='asdf asd asf'>This tag will be untouched, but initial '`' will be removed</div>
-  """
-  
   # TODO: Add support for multi-line embedded HTML via "```"
   # TODO: Add support for multiple tags in a single line via "\" delimeter
   # TODO: Improve error reporting for bad syntax
