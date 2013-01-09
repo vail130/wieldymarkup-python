@@ -5,25 +5,22 @@
 :license: See LICENSE.txt for details.
 """
 
-import sys
+import sys, os
 
-args = sys.argv[1:]
-
-compress = False
-if "-c" in args:
-  compress = True
-  args = [arg for arg in args if arg != "-c"]
-
-for filepath in args:
+def compile_file_from_path(filepath, strict=True):
   try:
     ext = filepath.split('/')[-1].split('.')[-1]
   except Exception:
-    print "Invalid argument."
-    exit()
+    if strict:
+      raise Exception("Could not get extension in " + str(filepath))
+    else:
+      return
   
-  if ext != 'txt':
-    print "Invalid argument."
-    exit()
+  if ext != 'wml':
+    if strict:
+      raise Exception("Invalid extension (" + str(filepath) + "). Must be .wml.")
+    else:
+      return
   
   def read_in_chunks(file_object, chunk_size=1024):
     """Lazy function (generator) to read a file piece by piece.
@@ -47,3 +44,41 @@ for filepath in args:
   filename = '/'.join(temp) + '/' + filepath.split('/')[-1].split('.')[0] + '.html'
   with open(filename, 'wb') as f:
     f.write(html)
+
+args = sys.argv
+print args
+
+if args[0].split('/')[0] == "wieldymarkup":
+  args = args[1:]
+
+compress = False
+if "-c" in args or "--compress" in args:
+  compress = True
+  args = [arg for arg in args if arg not in ["-c", "--compress"]]
+
+if "-d" in args:
+  d_index = args.index("-d")
+  if len(args) < d_index + 1:
+    raise Exception("The -d argument must be followed immediately by a directory path in which to compiler .wml files.")
+  
+  dir_path = str(args[d_index + 1])
+  if not os.path.isdir(dir_path):
+    raise Exception("Invalid directory path following -d argument.")
+    
+  if "-r" in args:
+    for root, dirs, files in os.walk(dir_path):
+      compile_file_from_path(os.path.join(root, name), strict=False)
+  else:
+    for filepath in os.listdir(dir_path):
+      if not os.path.isdir(os.path.join(dir_path, filepath)):
+        compile_file_from_path(os.path.join(dir_path, filepath), strict=False)
+  
+else:
+  strict = True
+  if "-f" in args or "--force" in args:
+    strict = False
+    args = [arg for arg in args if arg not in ["-f", "--force"]]
+  
+  for filepath in args:
+    compile_file_from_path(filepath, strict=strict)
+  

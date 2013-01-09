@@ -5,19 +5,33 @@
 
 WieldyMarkup is an HTML abstraction markup language, similar in many ways to [Haml](http://haml.info) and [Jade](http://jade-lang.com/). However, WieldyMarkup does not do any interpolation (currently), and is meant to be part of the build & deploy process, not the page serving process. It's probably best for writing static HTML pages and templates that use Underscore or Mustache templating languages, as well.
 
+## Installation
+
+```shell
+pip install wieldymarkup
+```
+
 ## Usage
 
-### Nested HTML
+Creates `.html` files with the same file name in the same directory as compiled `.wml` files. Add `-c` or `--compress` argument to remove whitespace between HTML tags.
+
+### Specific Files
+
+This will fail if any files do not have the `.wml` extension.
 
 ```shell
-python /path/to/wieldymarkup /path/to/text_file_1.txt /path/to/text_file_2.txt
+python /path/to/wieldymarkup /path/to/text_file_1.wml /path/to/text_file_2.wml
 ```
 
-### Compressed HTML
+### In a Directory
+
+The directory should directly follow the `-d` argument. This will only compile direct children with `.wml` extension.
 
 ```shell
-python /path/to/wieldymarkup -c /path/to/text_file_1.txt /path/to/text_file_2.txt
+python /path/to/wieldymarkup -d /path/to/parent/directory
 ```
+
+Add `-r` to compile all `.wml` files, recursively.
 
 ## Testing
 

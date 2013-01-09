@@ -6,3 +6,7 @@ lib/
 bin/
 .Python
 include/
+*.egg-info
+dist/
+build/
+MANIFEST

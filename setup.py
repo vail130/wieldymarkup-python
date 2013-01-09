@@ -1,6 +1,6 @@
 import sys
 from wieldymarkup import __version__
-from setuptools import setup, find_packages
+from distutils.core import setup
 
 # To install the wieldymarkup-python library, open a Terminal shell, then run this
 # file by typing:
@@ -19,15 +19,15 @@ else:
 setup(
   name = "wieldymarkup",
   version = __version__,
+  packages = ['wieldymarkup', 'wieldymarkup.test'],
   description = "WieldyMarkup HTML Abstraction Markup Language Compiler",
   author = "Vail Gold",
   author_email = "vail@vailgold.com",
   url = "http://github.com/vail130/wieldymarkup-python/",
-  keywords = ["wieldymarkup"],
+  license = "LICENSE.txt",
   install_requires = REQUIRES,
-  packages = find_packages(),
   classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
