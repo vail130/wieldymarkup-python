@@ -103,7 +103,13 @@ class Compiler(object):
     if self.text != "":
       self.compile()
   
-  def compile(self):
+  def compile(self, text=None, compress=None):
+    if text is not None:
+      self.text = text
+    
+    if compress is not None:
+      self.compress = not not compress
+    
     while self.text != "":
       self.process_current_level().close_lower_level_tags().process_next_line()
       

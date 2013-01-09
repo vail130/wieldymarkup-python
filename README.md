@@ -11,13 +11,13 @@ WieldyMarkup is an HTML abstraction markup language, similar in many ways to [Ha
 pip install wieldymarkup
 ```
 
-## Usage
+## Terminal Usage
 
 Creates `.html` files with the same file name in the same directory as compiled `.wml` files. Add `-c` or `--compress` argument to remove whitespace between HTML tags.
 
 ### Specific Files
 
-This will fail if any files do not have the `.wml` extension.
+This will fail if any files do not have the `.wml` extension. Use `-f` or `--force` anywhere to fail silently.
 
 ```shell
 python /path/to/wieldymarkup /path/to/text_file_1.wml /path/to/text_file_2.wml
@@ -32,6 +32,33 @@ python /path/to/wieldymarkup -d /path/to/parent/directory
 ```
 
 Add `-r` to compile all `.wml` files, recursively.
+
+## Python Usage
+
+```python
+def read_in_chunks(file_object, chunk_size=1024):
+  while True:
+    data = file_object.read(chunk_size)
+    if not data:
+      break
+    yield data
+
+with open("/path/to/file", 'rb') as f:
+  for piece in read_in_chunks(f):
+    data = piece
+  
+from wieldymarkup import Compiler
+
+# Just a one-off
+html = Compiler(data).output
+compressed_html = Compiler(data, compress=True).output
+
+# Or a little more flexible
+c = new Compiler()
+html = c.compile(data).output
+compressed_html = c.compile(data, compress=True).output
+html_again = c.compile(data, compress=False).output
+```
 
 ## Testing
 
