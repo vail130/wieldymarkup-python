@@ -54,7 +54,7 @@ html = Compiler(data).output
 compressed_html = Compiler(data, compress=True).output
 
 # Or a little more flexible
-c = new Compiler()
+c = Compiler()
 html = c.compile(data).output
 compressed_html = c.compile(data, compress=True).output
 html_again = c.compile(data, compress=False).output
@@ -63,6 +63,7 @@ html_again = c.compile(data, compress=False).output
 ## Testing
 
 ```shell
+pip install nose
 cd /path/to/wieldymarkup
 nosetests
 ```

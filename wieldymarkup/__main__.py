@@ -7,7 +7,7 @@
 
 import sys, os
 
-def compile_file_from_path(filepath, strict=True):
+def compile_file_from_path(filepath, strict=True, compress=False):
   try:
     ext = filepath.split('/')[-1].split('.')[-1]
   except Exception:
@@ -37,7 +37,7 @@ def compile_file_from_path(filepath, strict=True):
   
   from compile import Compiler
   
-  html = Compiler(data, compress=compress).output
+  html = Compiler(text=data, compress=compress).output
   
   temp = filepath.split('/')
   temp.pop()
@@ -46,7 +46,6 @@ def compile_file_from_path(filepath, strict=True):
     f.write(html)
 
 args = sys.argv
-print args
 
 if args[0].split('/')[0] == "wieldymarkup":
   args = args[1:]
@@ -67,11 +66,11 @@ if "-d" in args:
     
   if "-r" in args:
     for root, dirs, files in os.walk(dir_path):
-      compile_file_from_path(os.path.join(root, name), strict=False)
+      compile_file_from_path(os.path.join(root, name), strict=False, compress=compress)
   else:
     for filepath in os.listdir(dir_path):
       if not os.path.isdir(os.path.join(dir_path, filepath)):
-        compile_file_from_path(os.path.join(dir_path, filepath), strict=False)
+        compile_file_from_path(os.path.join(dir_path, filepath), strict=False, compress=compress)
   
 else:
   strict = True
@@ -80,5 +79,5 @@ else:
     args = [arg for arg in args if arg not in ["-f", "--force"]]
   
   for filepath in args:
-    compile_file_from_path(filepath, strict=strict)
+    compile_file_from_path(filepath, strict=strict, compress=compress)
   

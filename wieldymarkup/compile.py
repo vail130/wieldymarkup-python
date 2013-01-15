@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-import string, copy
+import string, copy, re
 
 class CompilerException(Exception):
   pass
 
 class Compiler(object):
-  # TODO: Add support for multi-line embedded HTML via "```"
-  # TODO: Improve error reporting for bad syntax
+  """
+  """
   
   embedding_token = '`'
   
@@ -33,7 +33,7 @@ class Compiler(object):
     return output
   
   @staticmethod
-  def get_selector_from_stripped_line(line):
+  def get_selector_from_line(line):
     first_whitespace_index = None
     for i, char in enumerate(line):
       if char in string.whitespace:
@@ -92,6 +92,11 @@ class Compiler(object):
     return leading_whitespace
   
   def __init__(self, text="", compress=False):
+    self.compile(text, compress)
+  
+  def compile(self, text="", compress=False):
+    self.text = str(text)
+    self.compress = not not compress
     self.output = ""
     self.open_tags = []
     self.indent_token = ""
@@ -99,16 +104,6 @@ class Compiler(object):
     self.previous_level = None
     self.text = text
     self.line_number = 0
-    self.compress = compress
-    if self.text != "":
-      self.compile()
-  
-  def compile(self, text=None, compress=None):
-    if text is not None:
-      self.text = text
-    
-    if compress is not None:
-      self.compress = not not compress
     
     while self.text != "":
       self.process_current_level().close_lower_level_tags().process_next_line()
@@ -181,20 +176,12 @@ class Compiler(object):
     
     else:
       # Support multiple tags on one line via "\-\" delimiter
-      while True:
-        line_split_list = line.split('\\-\\')
-        lines = [line_split_list[0]]
-        
-        if len(line_split_list) is 1:
-          line = line_split_list[0].strip()
-          break
-        else:
-          lines.append('\\-\\'.join(line_split_list[1:]))
-        
-        lines[0] = lines[0].strip()
-        selector = self.__class__.get_selector_from_stripped_line(lines[0])
+      line_split_list = line.split('\\-\\')
+      while len(line_split_list) > 1:
+        temp_line = line_split_list.pop(0).strip()
+        selector = self.__class__.get_selector_from_line(temp_line)
         self.process_selector(copy.copy(selector))
-        rest_of_line = lines[0][len(selector):].strip()
+        rest_of_line = temp_line[len(selector):].strip()
         rest_of_line = self.process_attributes(rest_of_line)
         self.add_html_to_output()
         
@@ -204,9 +191,9 @@ class Compiler(object):
         self.tag_attributes = []
         self.previous_level = self.current_level
         self.current_level += 1
-        line = '\\-\\'.join(lines[1:])
       
-      selector = self.__class__.get_selector_from_stripped_line(line)
+      line = line_split_list[len(line_split_list) - 1].strip()
+      selector = self.__class__.get_selector_from_line(line)
       self.process_selector(copy.copy(selector))
       rest_of_line = line[len(selector):].strip()
       rest_of_line = self.process_attributes(rest_of_line)

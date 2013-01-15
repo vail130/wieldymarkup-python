@@ -25,15 +25,15 @@ class TestCompiler(unittest.TestCase):
     expected = "The cat ran home!"
     self.assertEqual(c.__class__.remove_grouped_text(sample, "`"), expected)
   
-  def test_get_selector_from_stripped_line(self):
+  def test_get_selector_from_line(self):
     line = "div.class#id data-val=val data-val2=<%= val2 %> <Content <i>haya!</i> goes here>"
-    self.assertEqual(Compiler.get_selector_from_stripped_line(line), "div.class#id")
+    self.assertEqual(Compiler.get_selector_from_line(line), "div.class#id")
     
     line = "div"
-    self.assertEqual(Compiler.get_selector_from_stripped_line(line), "div")
+    self.assertEqual(Compiler.get_selector_from_line(line), "div")
     
     line = ".class#id.class2 val=val1"
-    self.assertEqual(Compiler.get_selector_from_stripped_line(line), ".class#id.class2")
+    self.assertEqual(Compiler.get_selector_from_line(line), ".class#id.class2")
   
   def test_get_tag_nest_level(self):
     text = "  <div>"
@@ -269,3 +269,9 @@ class TestCompiler(unittest.TestCase):
     c.add_html_to_output()
     self.assertEqual(c.output, '<span><%= val1 %></span>')
   
+
+
+
+
+
+
